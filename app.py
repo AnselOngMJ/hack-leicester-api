@@ -71,13 +71,13 @@ def format_event_venue(result):
 @app.route('/')
 @cross_origin()
 def start():
-    # create_db_table()
-    with open('/home/anselong/hack-leicester-api/static/event.csv', newline='') as csvfile:
+    create_db_table()
+    with open('static/event.csv', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [list(row.values()) for row in reader]
         cur.executemany('INSERT INTO event VALUES (?, ?, ?, ?, ?, ?)', rows)
         con.commit()
-    with open('/home/anselong/hack-leicester-api/static/venue.csv', newline='') as csvfile:
+    with open('static/venue.csv', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [list(row.values()) for row in reader]
         cur.executemany('INSERT INTO venue VALUES (?, ?, ?)', rows)
@@ -122,3 +122,15 @@ def filter():
     result = cur.execute('SELECT * FROM event, venue WHERE event.venueId == venue.id and startDate >= ? AND endDate <= ? AND capacity >= ?', [start_date, end_date, capacity])
     events = [format_event_venue(event) for event in result.fetchall()]
     return jsonify(events)
+
+@app.route('/available')
+@cross_origin()
+def available():
+    start_date = request.args.get('startDate')
+    end_date = request.args.get('endDate')
+    result = cur.execute('SELECT DISTINCT id, name, capacity FROM venue WHERE id NOT IN ( \
+                         SELECT venueId FROM event WHERE NOT (endDate <= ? OR startDate >= ?)\
+                         ORDER BY id\
+    )', [start_date, end_date])
+    venues = [format_venue(venue) for venue in result.fetchall()]
+    return jsonify(venues)
