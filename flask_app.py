@@ -2,8 +2,11 @@ import json
 from flask import Flask, jsonify, request
 import sqlite3
 import csv
+from flask_cors import CORS, cross_origin
 
 app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Access-Control-Allow-Origin'
 con = sqlite3.connect('database.db', check_same_thread=False)
 con.row_factory = sqlite3.Row
 cur = con.cursor()
@@ -66,14 +69,15 @@ def format_event_venue(result):
     return event
 
 @app.route('/')
+@cross_origin()
 def start():
-    create_db_table()
-    with open('event.csv', newline='') as csvfile:
+    # create_db_table()
+    with open('/home/anselong/hack-leicester-api/static/event.csv', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [list(row.values()) for row in reader]
         cur.executemany('INSERT INTO event VALUES (?, ?, ?, ?, ?, ?)', rows)
         con.commit()
-    with open('venue.csv', newline='') as csvfile:
+    with open('/home/anselong/hack-leicester-api/static/venue.csv', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [list(row.values()) for row in reader]
         cur.executemany('INSERT INTO venue VALUES (?, ?, ?)', rows)
@@ -81,18 +85,21 @@ def start():
     return jsonify([])
 
 @app.route('/events')
+@cross_origin()
 def events():
     result = cur.execute('SELECT * FROM event')
     events = [format_event(event) for event in result.fetchall()]
     return jsonify(events)
 
 @app.route('/venues')
+@cross_origin()
 def venues():
     result = cur.execute('SELECT * FROM venue')
     venues = [format_venue(venue) for venue in result.fetchall()]
     return jsonify(venues)
 
 @app.route('/create', methods=['POST'])
+@cross_origin()
 def create():
     event = json.loads(request.data)
     id = cur.execute('SELECT MAX(id) FROM event').fetchone()[0] + 1
@@ -101,6 +108,7 @@ def create():
     return jsonify(event)
 
 @app.route('/filter')
+@cross_origin()
 def filter():
     start_date = request.args.get('startDate')
     end_date = request.args.get('endDate')
